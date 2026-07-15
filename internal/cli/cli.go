@@ -2,6 +2,7 @@
 package cli
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -18,17 +19,21 @@ import (
 // Run writes results to stdout, diagnostics to stderr and returns a process exit code.
 func Run(ctx context.Context, args []string, stdout, stderr io.Writer) int {
 	fs := flag.NewFlagSet("pulse", flag.ContinueOnError)
-	fs.SetOutput(stderr)
+	var diagnostics bytes.Buffer
+	fs.SetOutput(&diagnostics)
 	timeout := fs.Duration("timeout", 5*time.Second, "timeout per URL, including redirects")
 	workers := fs.Int("workers", 4, "maximum concurrent requests")
 	jsonOutput := fs.Bool("json", false, "print results as JSON")
 	fs.Usage = func() { fmt.Fprintln(fs.Output(), "Usage: pulse [flags] URL [URL ...]"); fs.PrintDefaults() }
 	if err := fs.Parse(args); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
-			fs.SetOutput(stdout)
-			fs.Usage()
+			if _, err := io.Copy(stdout, &diagnostics); err != nil {
+				fmt.Fprintln(stderr, "pulse: write help:", err)
+				return 1
+			}
 			return 0
 		}
+		io.Copy(stderr, &diagnostics)
 		return 2
 	}
 	results, err := checker.Check(ctx, fs.Args(), *timeout, *workers)

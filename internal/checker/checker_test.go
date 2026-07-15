@@ -44,7 +44,7 @@ func TestValidationBeforeRequests(t *testing.T) {
 	var calls atomic.Int32
 	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { calls.Add(1) }))
 	defer s.Close()
-	for _, bad := range []string{"", "example.com", "ftp://example.com", "http:///missing", "https://u:p@example.com", "http://host:bad"} {
+	for _, bad := range []string{"", "example.com", "ftp://example.com", "http:///missing", "https://u:p@example.com", "http://host:bad", "http://127.0.0.1:65536", "http://127.0.0.1:0"} {
 		if _, err := Check(context.Background(), []string{s.URL, bad}, time.Second, 2); err == nil {
 			t.Errorf("accepted %q", bad)
 		}

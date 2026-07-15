@@ -88,3 +88,15 @@ func TestCancelledRun(t *testing.T) {
 		t.Fatalf("code=%d", code)
 	}
 }
+
+func TestHelpOutputErrors(t *testing.T) {
+	var stderr bytes.Buffer
+	if code := Run(context.Background(), []string{"-h"}, brokenWriter{}, &stderr); code != 1 {
+		t.Fatalf("help write failure code=%d", code)
+	}
+	var out bytes.Buffer
+	stderr.Reset()
+	if code := Run(context.Background(), []string{"-h"}, &out, &stderr); code != 0 || stderr.Len() != 0 {
+		t.Fatalf("help code=%d stderr=%s", code, &stderr)
+	}
+}

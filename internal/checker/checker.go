@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"strconv"
 	"sync"
 	"time"
 )
@@ -35,6 +36,12 @@ func Check(ctx context.Context, urls []string, timeout time.Duration, workers in
 		u, err := url.Parse(raw)
 		if err != nil || u == nil || (u.Scheme != "http" && u.Scheme != "https") || u.Hostname() == "" || u.User != nil {
 			return nil, fmt.Errorf("URL %d must be an absolute http(s) URL without credentials", i+1)
+		}
+		if port := u.Port(); port != "" {
+			n, err := strconv.Atoi(port)
+			if err != nil || n < 1 || n > 65535 {
+				return nil, fmt.Errorf("URL %d has an invalid port", i+1)
+			}
 		}
 		if _, err := http.NewRequest(http.MethodGet, raw, nil); err != nil {
 			return nil, fmt.Errorf("invalid URL %d: %w", i+1, err)
